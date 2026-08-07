@@ -1561,6 +1561,36 @@ fn transform_component_with_hook_does_not_panic() {
 }
 
 #[test]
+fn transform_bails_out_on_nested_typescript_this_parameter() {
+    let source = r#"
+        type Val = { count: number; method(): void };
+
+        function Component() {
+            useEffect(() => {
+                const get = (): Val => {
+                    window.value = {
+                        count: 0,
+                        method(this: Val) {},
+                    };
+                    return window.value;
+                };
+                get().count++;
+            }, []);
+        }
+    "#;
+    let result = transform_source(
+        source,
+        Syntax::Typescript(Default::default()),
+        default_options(),
+    );
+
+    assert!(
+        result.program.is_none(),
+        "nested lowering errors must not emit a partial program"
+    );
+}
+
+#[test]
 fn transform_ref_access_error_is_not_swc_diagnostic_with_default_panic_threshold() {
     let source = r#"
         import { useRef } from 'react';
